@@ -1,0 +1,898 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>PRAVAH — Predictive Routing And Voyage Analytics Hub</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<script>
+  window.__libReady = {};
+  function loadLib(primary, fallback){
+    return new Promise((resolve) => {
+      const s = document.createElement('script');
+      s.src = primary;
+      s.onload = () => resolve(true);
+      s.onerror = () => {
+        console.warn('Primary CDN failed for ' + primary + ', trying fallback...');
+        const s2 = document.createElement('script');
+        s2.src = fallback;
+        s2.onload = () => resolve(true);
+        s2.onerror = () => resolve(false);
+        document.head.appendChild(s2);
+      };
+      document.head.appendChild(s);
+    });
+  }
+  window.__libReady.chart = loadLib(
+    'https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js',
+    'https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js'
+  );
+  window.__libReady.leaflet = loadLib(
+    'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js',
+    'https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js'
+  );
+</script>
+<style>
+  :root{
+    --bg:#0A0E13; --panel:#10151C; --panel2:#141B24; --border:#1C2530; --border-strong:#2A3542;
+    --accent:#35B7A8; --accent-dim:#1B4A44; --accent-soft:#132C29;
+    --green:#33C481; --green-soft:#0F3524;
+    --red:#E2554F; --red-soft:#331A19;
+    --blue:#5B7FA6; --blue-soft:#16232F;
+    --text:#E4E7EA; --text-dim:#8993A1; --text-faint:#57616D;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{background:var(--bg); color:var(--text); font-family:'IBM Plex Mono',monospace; font-size:12px; padding:14px; min-height:100vh;}
+
+  .hdr{display:flex; align-items:center; justify-content:space-between; padding-bottom:10px; border-bottom:1px solid var(--border-strong); margin-bottom:8px; flex-wrap:wrap; gap:8px;}
+  .hdr-left{display:flex; align-items:baseline; gap:14px; flex-wrap:wrap;}
+  .logo{font-size:18px; font-weight:700; color:var(--accent); letter-spacing:1px;}
+  .logo span{color:var(--text-dim); font-weight:400; font-size:11px;}
+  .live-dot{position:relative; display:inline-block; width:7px; height:7px; border-radius:50%; background:var(--green); margin-right:6px;}
+  .live-dot::before{content:''; position:absolute; top:-5px; left:-5px; width:17px; height:17px; border-radius:50%; border:1px solid var(--green); opacity:0.45; animation:sweep 2.2s ease-out infinite;}
+  .live-dot.off{background:var(--red);} .live-dot.off::before{border-color:var(--red); animation:none; opacity:0;}
+  @keyframes sweep{0%{transform:scale(0.4); opacity:0.6;} 100%{transform:scale(1.6); opacity:0;}}
+  .hdr-right{display:flex; gap:22px; font-size:11px; color:var(--text-dim); flex-wrap:wrap;}
+  .hdr-right b{color:var(--text); font-weight:600;}
+
+  .ticker-wrap{overflow:hidden; white-space:nowrap; border:1px solid var(--border); background:var(--panel); padding:6px 0; margin-bottom:6px;}
+  .ticker-wrap.fx{padding:4px 0; margin-bottom:14px;}
+  .ticker{display:inline-block; animation:scroll 32s linear infinite;}
+  .ticker.fx-ticker{animation-duration:22s;}
+  @keyframes scroll{0%{transform:translateX(0)} 100%{transform:translateX(-50%)}}
+  .tick-item{display:inline-block; padding:0 22px; font-size:11px;}
+  .tick-item .rt{color:var(--text-dim); margin-right:6px;}
+  .up{color:var(--green);} .down{color:var(--red);}
+
+  /* ---- tab navigation ---- */
+  .tabbar{display:flex; gap:2px; border-bottom:1px solid var(--border-strong); margin-bottom:16px; overflow-x:auto;}
+  .tab-btn{background:transparent; border:none; color:var(--text-faint); font-family:inherit; font-size:10.5px; letter-spacing:1.2px; font-weight:600; padding:10px 16px; cursor:pointer; white-space:nowrap; border-bottom:2px solid transparent; transition:color .15s;}
+  .tab-btn:hover{color:var(--text-dim);}
+  .tab-btn.active{color:var(--accent); border-bottom:2px solid var(--accent);}
+  .tab-panel{display:none;}
+  .tab-panel.active{display:block; animation:fadein .18s ease;}
+  @keyframes fadein{from{opacity:0;} to{opacity:1;}}
+
+  .section-label{display:flex; align-items:center; gap:10px; margin:4px 0 10px;}
+  .section-label span{font-size:10px; letter-spacing:2px; color:var(--text-faint); font-weight:600; white-space:nowrap;}
+  .section-label::after{content:''; flex:1; height:1px; background:var(--border);}
+
+  .grid{display:grid; grid-template-columns: 260px 1fr 260px; gap:10px;}
+  @media (max-width: 980px){ .grid{grid-template-columns: 1fr;} }
+  .grid.wide{grid-template-columns: 1fr 1fr; }
+  @media (max-width: 780px){ .grid.wide{grid-template-columns: 1fr;} }
+  .stack{display:flex; flex-direction:column; gap:10px;}
+
+  .panel{background:var(--panel); border:1px solid var(--border); border-radius:3px; margin-bottom:10px;}
+  .panel-hd{display:flex; align-items:center; justify-content:space-between; padding:9px 12px; border-bottom:1px solid var(--border); flex-wrap:wrap; gap:4px;}
+  .panel-hd h2{font-size:10.5px; letter-spacing:1.5px; color:var(--text-dim); font-weight:600;}
+  .panel-hd small{color:var(--text-faint); font-size:9px;}
+  .panel-body{padding:12px;}
+
+  .hero{background:var(--panel); border:1px solid var(--border-strong); border-top:2px solid var(--accent); border-radius:3px; position:relative;}
+  .hero::before, .hero::after{content:''; position:absolute; width:9px; height:9px; border-top:1.5px solid var(--accent); pointer-events:none;}
+  .hero::before{top:-1px; left:-1px; border-left:1.5px solid var(--accent);}
+  .hero::after{top:-1px; right:-1px; border-right:1.5px solid var(--accent); border-top:1.5px solid var(--accent);}
+  .hero .panel-hd{border-bottom:1px solid var(--border-strong);}
+  .hero .panel-hd h2{color:var(--accent); font-size:11.5px;}
+
+  table{width:100%; border-collapse:collapse; font-size:10.5px;}
+  th{text-align:left; color:var(--text-faint); font-weight:500; padding:4px 4px; border-bottom:1px solid var(--border); font-size:9.5px; letter-spacing:.5px;}
+  td{padding:5px 4px; border-bottom:1px solid var(--border);}
+  tr:last-child td{border-bottom:none;}
+  .port-name{color:var(--text); font-weight:600;}
+  .bar-track{width:100%; height:5px; background:#161C22; border-radius:3px; overflow:hidden;}
+  .bar-fill{height:100%; border-radius:3px;}
+
+  select, input{background:#0C1016; border:1px solid var(--border-strong); color:var(--text); font-family:inherit; font-size:11px; padding:5px 6px; border-radius:2px; outline:none;}
+  select:focus, input:focus{border-color:var(--accent);}
+  label{display:block; font-size:9.5px; color:var(--text-faint); margin-bottom:3px; letter-spacing:.5px;}
+  .field{margin-bottom:8px;}
+  .row2{display:grid; grid-template-columns:1fr 1fr; gap:8px;}
+  .row3{display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px;}
+  .btn{background:var(--accent); color:#062521; border:none; font-family:inherit; font-weight:700; font-size:11px; padding:8px 10px; border-radius:2px; cursor:pointer; letter-spacing:.5px; width:100%;}
+  .btn:hover{background:#49CBBB;}
+  .btn.secondary{background:transparent; color:var(--accent); border:1px solid var(--accent-dim);}
+  .btn.secondary:hover{background:var(--accent-soft);}
+  .btn-row{display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:8px;}
+
+  .rec-box{margin-top:10px; border:1px solid var(--border-strong); background:var(--panel2); border-radius:2px; padding:12px; min-height:96px;}
+  .rec-title{color:var(--green); font-weight:700; font-size:13px; margin-bottom:4px;}
+  .rec-action{display:inline-block; padding:2px 7px; border-radius:2px; font-size:10px; font-weight:700; margin-left:8px; vertical-align:middle;}
+  .action-book{background:var(--green-soft); color:var(--green);}
+  .action-wait{background:var(--blue-soft); color:var(--blue);}
+  .action-monitor{background:var(--accent-soft); color:var(--accent);}
+  .rec-why{color:var(--text-dim); font-size:10.5px; line-height:1.6; margin-top:6px;}
+  .rec-why ul{margin:4px 0 0 16px;}
+  .rec-flag{color:var(--red); font-weight:700;}
+  .kpi-row{display:flex; gap:18px; margin-top:8px; font-size:10.5px; flex-wrap:wrap;}
+  .kpi{color:var(--text-dim);}
+  .kpi b{color:var(--text); font-size:14px; display:block;}
+
+  .rate-card{border:1px solid var(--border); border-radius:2px; padding:8px 9px; margin-bottom:8px; background:var(--panel2);}
+  .rate-card:last-child{margin-bottom:0;}
+  .rate-top{display:flex; justify-content:space-between; align-items:baseline;}
+  .rate-name{font-size:10.5px; color:var(--text-dim); letter-spacing:.5px;}
+  .rate-val{font-size:16px; font-weight:700;}
+  .rate-delta{font-size:10px; font-weight:600;}
+  svg.spark{width:100%; height:26px; display:block; margin-top:4px;}
+
+  .weather-box{display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;}
+  .weather-temp{font-size:24px; font-weight:700; color:var(--accent);}
+  .risk-badge{padding:3px 8px; border-radius:2px; font-weight:700; font-size:10px;}
+  .risk-low{background:var(--green-soft); color:var(--green);}
+  .risk-moderate{background:var(--blue-soft); color:var(--blue);}
+  .risk-high{background:var(--red-soft); color:var(--red);}
+  .src-note{color:var(--text-faint); font-size:9px; margin-top:6px; font-style:italic;}
+
+  #mapPanel{height:520px;}
+  #routeMap{height:100%; width:100%; border-radius:2px;}
+  .leaflet-container{background:#0A0E13 !important; font-family:'IBM Plex Mono',monospace;}
+  .dark-tiles{ filter: grayscale(0.5) invert(1) brightness(0.82) contrast(1.2) hue-rotate(180deg) saturate(0.5); }
+  .ship-icon{ background:transparent; border:none; }
+
+  .strategy-table td{font-size:10.5px;}
+  .best-row td{background:var(--green-soft);}
+
+  .alerts{max-height:420px; overflow-y:auto;}
+  .alert-item{display:flex; gap:8px; padding:7px 0; border-bottom:1px solid var(--border); font-size:10.5px;}
+  .alert-item:last-child{border-bottom:none;}
+  .alert-tag{font-weight:700; font-size:9px; padding:1px 5px; border-radius:2px; height:fit-content; white-space:nowrap;}
+  .tag-warn{background:var(--blue-soft); color:var(--blue);}
+  .tag-risk{background:var(--red-soft); color:var(--red);}
+  .tag-info{background:var(--accent-soft); color:var(--accent);}
+  .alert-time{color:var(--text-faint); font-size:9.5px; min-width:44px;}
+
+  .legend{display:flex; gap:14px; font-size:9.5px; color:var(--text-faint); margin-top:10px; flex-wrap:wrap;}
+  .legend span{display:inline-flex; align-items:center; gap:4px;}
+  .dot{width:6px; height:6px; border-radius:50%; display:inline-block;}
+  ::-webkit-scrollbar{width:6px;} ::-webkit-scrollbar-thumb{background:var(--border-strong); border-radius:3px;}
+</style>
+</head>
+<body>
+
+<div class="hdr">
+  <div class="hdr-left">
+    <div class="logo">PRAVAH<span> · PREDICTIVE ROUTING AND VOYAGE ANALYTICS HUB</span></div>
+    <div id="backendStatus" style="font-size:11px; color:var(--text-dim);"><span class="live-dot off" id="backendDot"></span><span id="backendText">CHECKING BACKEND…</span></div>
+  </div>
+  <div class="hdr-right">
+    <div>ROUTES TRACKED <b>12</b></div>
+    <div>PORTS <b>5</b></div>
+    <div id="clock">--:--:--</div>
+  </div>
+</div>
+
+<div class="ticker-wrap"><div class="ticker" id="ticker"></div></div>
+<div class="ticker-wrap fx"><div class="ticker fx-ticker" id="fxTicker"><span class="tick-item">Connect backend to load live FX rates…</span></div></div>
+
+<div class="tabbar">
+  <button class="tab-btn active" data-tab="overview">DECISION ENGINE</button>
+  <button class="tab-btn" data-tab="data">LIVE DATA</button>
+  <button class="tab-btn" data-tab="map">OPERATIONS MAP</button>
+  <button class="tab-btn" data-tab="planning">PLANNING TOOLS</button>
+  <button class="tab-btn" data-tab="alerts">ALERTS</button>
+</div>
+
+<!-- ================= TAB: OVERVIEW / DECISION ENGINE ================= -->
+<div class="tab-panel active" data-tab="overview">
+  <div class="grid wide">
+    <div class="hero">
+      <div class="panel-hd"><h2>AI DECISION ENGINE</h2><small>FORECAST + WEATHER + FX + CONGESTION</small></div>
+      <div class="panel-body">
+        <div class="row2">
+          <div class="field"><label>ORIGIN</label>
+            <select id="calcOrigin"><option>Australia</option><option>Indonesia</option><option>Mozambique</option></select>
+          </div>
+          <div class="field"><label>DESTINATION</label>
+            <select id="calcDest"><option>Paradip</option><option>Vizag</option><option>Gangavaram</option><option>Dhamra</option><option>Haldia</option></select>
+          </div>
+        </div>
+        <div class="row2">
+          <div class="field"><label>CARGO (MT) · max 200,000</label><input id="calcQty" type="number" value="65000" min="5000" max="200000" step="1000"></div>
+          <div class="field"><label>CONTRACT</label>
+            <select id="calcTerm"><option>Spot</option><option>Short-term COA</option><option>Medium-term COA</option></select>
+          </div>
+        </div>
+        <button class="btn" onclick="runDecision()">RUN AI DECISION ENGINE</button>
+        <div class="rec-box" id="recBox">
+          <div class="rec-title">—</div>
+          <div class="rec-why">Enter cargo details and run the engine to get a vessel recommendation, action, and full reasoning.</div>
+        </div>
+        <div class="btn-row">
+          <button class="btn secondary" onclick="downloadReport('pdf')">⬇ DOWNLOAD PDF</button>
+          <button class="btn secondary" onclick="downloadReport('txt')">⬇ DOWNLOAD TXT</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="hero">
+      <div class="panel-hd"><h2>COST BREAKDOWN</h2><small>USD → INR AT LIVE FX</small></div>
+      <div class="panel-body" id="costBody">
+        <div class="src-note">Run the decision engine to populate cost breakdown.</div>
+      </div>
+      <div class="panel-hd" style="border-top:1px solid var(--border-strong); margin-top:2px;"><h2>FREIGHT RATE FORECAST</h2><small>USD/TONNE · 90-DAY HORIZON</small></div>
+      <div class="panel-body">
+        <div class="row2" style="margin-bottom:8px;">
+          <div class="field"><label>ROUTE</label>
+            <select id="fcRoute">
+              <option>Australia → Paradip</option>
+              <option>Indonesia → Vizag</option>
+              <option>Mozambique → Gangavaram</option>
+              <option>Australia → Dhamra</option>
+              <option>Indonesia → Haldia</option>
+            </select>
+          </div>
+          <div class="field"><label>VESSEL CLASS</label>
+            <select id="fcVessel">
+              <option>Supramax</option><option>Panamax</option><option>Handysize</option><option>Capesize</option>
+            </select>
+          </div>
+        </div>
+        <div style="position:relative; height:180px;"><canvas id="fcChart"></canvas></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ================= TAB: LIVE DATA ================= -->
+<div class="tab-panel" data-tab="data">
+  <div class="grid">
+    <div class="stack">
+      <div class="panel">
+        <div class="panel-hd"><h2>EAST COAST PORT STATUS</h2><small>DRAFT / BERTHS / CONGESTION</small></div>
+        <div class="panel-body">
+          <table id="portTable">
+            <thead><tr><th>PORT</th><th>DRAFT</th><th>LOA MAX</th><th>BERTHS</th><th>CONGESTION</th></tr></thead>
+            <tbody></tbody>
+          </table>
+          <div class="legend">
+            <span><i class="dot" style="background:var(--green)"></i>Low</span>
+            <span><i class="dot" style="background:var(--blue)"></i>Moderate</span>
+            <span><i class="dot" style="background:var(--red)"></i>High</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-hd"><h2>WEATHER &amp; VOYAGE RISK</h2><small id="weatherLoc">DESTINATION</small></div>
+        <div class="panel-body" id="weatherBody">
+          <div class="src-note">Run a recommendation on the Decision Engine tab to load live weather.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="stack">
+      <div class="panel">
+        <div class="panel-hd"><h2>COMMODITIES &amp; INFLATION</h2><small>CALIBRATED MODEL</small></div>
+        <div class="panel-body" id="commodityCards">
+          <div class="src-note">Connect backend to load this panel.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="stack">
+      <div class="panel">
+        <div class="panel-hd"><h2>REAL MARKET SIGNALS</h2><small>OIL + DRY-BULK EQUITIES</small></div>
+        <div class="panel-body" id="marketSignals">
+          <div class="src-note">Connect backend to load real oil price and dry-bulk shipping equity signals (Yahoo Finance, free public data).</div>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-hd"><h2>LIVE RATES</h2><small>BY VESSEL CLASS · MODEL, LIVE-ADJUSTED</small></div>
+        <div class="panel-body" id="rateCards"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ================= TAB: OPERATIONS MAP ================= -->
+<div class="tab-panel" data-tab="map">
+  <div class="panel" id="mapPanel">
+    <div class="panel-hd"><h2>ROUTE MAP</h2><small>ORIGIN → DESTINATION · RISK-COLOURED · LIVE AIS SHIPS</small></div>
+    <div class="panel-body" style="height:calc(100% - 34px); padding:0;"><div id="routeMap"></div></div>
+  </div>
+</div>
+
+<!-- ================= TAB: PLANNING TOOLS ================= -->
+<div class="tab-panel" data-tab="planning">
+  <div class="grid wide">
+    <div class="panel">
+      <div class="panel-hd"><h2>IDLE &amp; REPOSITIONING ADVISOR</h2><small>MINIMISE BALLAST TIME AFTER DISCHARGE</small></div>
+      <div class="panel-body">
+        <div class="row2">
+          <div class="field"><label>VESSEL CURRENTLY AT</label>
+            <select id="idlePort"><option>Paradip</option><option>Vizag</option><option>Gangavaram</option><option>Dhamra</option><option>Haldia</option></select>
+          </div>
+          <div class="field"><label>VESSEL CLASS</label>
+            <select id="idleVessel"><option>Handysize</option><option>Supramax</option><option>Panamax</option><option>Capesize</option></select>
+          </div>
+        </div>
+        <button class="btn secondary" onclick="runIdleAdvisor()">FIND BEST NEXT POSITION</button>
+        <div id="idleResult" style="margin-top:10px;">
+          <div class="src-note">Once a vessel discharges and sits idle, this ranks the three load origins by expected next-voyage revenue minus ballast (empty-running) cost.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-hd"><h2>STRATEGY SELECTOR</h2><small>SAME CARGO, DIFFERENT ORIGINS — RANKED BY LANDED COST</small></div>
+      <div class="panel-body">
+        <button class="btn secondary" onclick="runStrategyCompare()">COMPARE STRATEGIES FOR THIS CARGO</button>
+        <div style="margin-top:10px; overflow-x:auto;">
+          <table class="strategy-table" id="strategyTable">
+            <thead><tr><th>ORIGIN</th><th>VESSEL</th><th>ACTION</th><th>COST (USD)</th><th>COST (INR)</th><th>DELIVERY</th><th>WEATHER</th></tr></thead>
+            <tbody><tr><td colspan="7" class="src-note">No comparison run yet.</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ================= TAB: ALERTS ================= -->
+<div class="tab-panel" data-tab="alerts">
+  <div class="panel">
+    <div class="panel-hd"><h2>RISK &amp; DISRUPTION ALERTS</h2><small>AUTO-GENERATED</small></div>
+    <div class="panel-body alerts" id="alertFeed"></div>
+  </div>
+</div>
+
+<div class="legend" style="margin-top:6px;">
+  <span><i class="dot" style="background:var(--green)"></i>Weather, FX, market signals, and ship positions are live public data via the PRAVAH backend when reachable. Freight rates are a calibrated model, live-adjusted by real oil price and dry-bulk shipping equity signals. Commodities are a calibrated simulation. See README for data-source details.</span>
+</div>
+
+<script>
+window.addEventListener('error', function(e){
+  const bar = document.createElement('div');
+  bar.style.cssText = 'position:fixed; top:0; left:0; right:0; z-index:9999; background:#331A19; color:#F3A9A6; font-family:monospace; font-size:11px; padding:8px 12px; border-bottom:2px solid #E2554F;';
+  bar.textContent = '⚠ Script error: ' + e.message + ' (line ' + e.lineno + ') — a panel below this may not have rendered. Open DevTools console (F12) for the full stack.';
+  document.body.prepend(bar);
+});
+const API_BASE = 'http://localhost:8000';
+
+// ---------- tab navigation ----------
+function switchTab(name){
+  document.querySelectorAll('.tab-panel').forEach(p=>p.classList.toggle('active', p.dataset.tab===name));
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.toggle('active', b.dataset.tab===name));
+  if(name==='map' && typeof map!=='undefined' && map) setTimeout(()=>map.invalidateSize(), 60);
+}
+document.querySelectorAll('.tab-btn').forEach(b=>b.addEventListener('click', ()=>switchTab(b.dataset.tab)));
+
+// ---------- static reference data ----------
+const ports = [
+  {name:'Paradip',    draft:18.1, loa:300, berthsFree:2, berthsTotal:6, congestion:38, lat:20.2648, lon:86.6947},
+  {name:'Vizag',      draft:17.0, loa:290, berthsFree:1, berthsTotal:7, congestion:62, lat:17.6868, lon:83.2185},
+  {name:'Gangavaram', draft:20.2, loa:330, berthsFree:3, berthsTotal:5, congestion:22, lat:17.6205, lon:83.2504},
+  {name:'Dhamra',     draft:18.5, loa:300, berthsFree:2, berthsTotal:4, congestion:45, lat:20.7880, lon:86.9491},
+  {name:'Haldia',     draft:8.6,  loa:186, berthsFree:1, berthsTotal:5, congestion:71, lat:22.0667, lon:88.0698},
+];
+const origins = {
+  Australia:  {lat:-32.9283, lon:151.7817},
+  Indonesia:  {lat:-1.2379,  lon:116.8529},
+  Mozambique: {lat:-19.8436, lon:34.8389},
+};
+const vesselSpecs = {Handysize:{loaMax:190}, Supramax:{loaMax:200}, Panamax:{loaMax:230}, Capesize:{loaMax:300}};
+const routes = ['Australia → Paradip','Indonesia → Vizag','Mozambique → Gangavaram','Australia → Dhamra','Indonesia → Haldia'];
+const vesselClasses = ['Handysize','Supramax','Panamax','Capesize'];
+
+let liveRates = {Handysize:14.2, Supramax:16.8, Panamax:15.4, Capesize:11.9};
+let history = {}; vesselClasses.forEach(v=>history[v]=Array(24).fill(liveRates[v]));
+let backendUp = false;
+
+// ---------- shared helpers ----------
+function readCargoMt(){
+  const el = document.getElementById('calcQty');
+  let v = parseFloat(el.value) || 65000;
+  const clamped = Math.max(5000, Math.min(v, 200000));
+  if(clamped !== v){ el.value = clamped; v = clamped; }
+  return v;
+}
+const usd = n => '$' + Number(n).toLocaleString('en-US', {maximumFractionDigits:2});
+const inr = n => '₹' + Number(n).toLocaleString('en-IN', {maximumFractionDigits:0});
+
+// ---------- clock ----------
+function tickClock(){document.getElementById('clock').textContent=new Date().toUTCString().slice(17,25)+' UTC';}
+setInterval(tickClock,1000); tickClock();
+
+// ---------- backend check ----------
+async function checkBackend(){
+  try{
+    const r = await fetch(API_BASE+'/', {signal: AbortSignal.timeout(2500)});
+    if(!r.ok) throw new Error('bad status');
+    backendUp = true;
+    document.getElementById('backendDot').classList.remove('off');
+    document.getElementById('backendText').textContent = 'BACKEND CONNECTED · LIVE DATA ENABLED';
+    loadFX(); loadCommodities(); loadMarketSignals();
+  }catch(e){
+    backendUp = false;
+    document.getElementById('backendDot').classList.add('off');
+    document.getElementById('backendText').textContent = 'BACKEND OFFLINE · run uvicorn (see README) for weather/FX/decision engine/map/reports';
+  }
+}
+checkBackend();
+setInterval(checkBackend, 15000);
+
+// ---------- port table ----------
+function congColor(c){return c<40?'var(--green)':c<65?'var(--blue)':'var(--red)';}
+function renderPorts(){
+  const tb=document.querySelector('#portTable tbody'); tb.innerHTML='';
+  ports.forEach(p=>{
+    const tr=document.createElement('tr');
+    tr.innerHTML=`<td class="port-name">${p.name}</td><td>${p.draft}m</td><td>${p.loa}m</td>
+      <td>${p.berthsFree}/${p.berthsTotal}</td>
+      <td><div class="bar-track"><div class="bar-fill" style="width:${p.congestion}%; background:${congColor(p.congestion)}"></div></div></td>`;
+    tb.appendChild(tr);
+  });
+}
+renderPorts();
+
+// ---------- freight ticker (simulated) ----------
+function renderTicker(){
+  const items=[];
+  routes.forEach(r=>{
+    vesselClasses.forEach(v=>{
+      const val=(liveRates[v]*(0.85+Math.random()*0.3)).toFixed(2);
+      const delta=(Math.random()*4-2).toFixed(1);
+      const cls=delta>=0?'up':'down';
+      items.push(`<span class="tick-item"><span class="rt">${r} · ${v}</span><b>$${val}</b> <span class="${cls}">${delta>=0?'▲':'▼'}${Math.abs(delta)}%</span></span>`);
+    });
+  });
+  document.getElementById('ticker').innerHTML = items.join('') + items.join('');
+}
+renderTicker();
+
+// ---------- FX ticker (live via backend) ----------
+async function loadFX(){
+  if(!backendUp) return;
+  try{
+    const r = await fetch(API_BASE+'/api/fx');
+    const d = await r.json();
+    const pairs = [['USD/INR', d.rates.INR], ['USD/AUD', d.rates.AUD], ['USD/IDR', d.rates.IDR], ['USD/EUR', d.rates.EUR]];
+    const trendCls = d.usd_inr_trend_pct_7d > 0 ? 'up' : d.usd_inr_trend_pct_7d < 0 ? 'down' : '';
+    const items = pairs.map(([name,val])=>`<span class="tick-item"><span class="rt">${name}</span><b>${(+val).toFixed(2)}</b></span>`);
+    items.push(`<span class="tick-item"><span class="rt">7d USD/INR trend</span><span class="${trendCls}">${d.usd_inr_trend_pct_7d>0?'▲':'▼'}${Math.abs(d.usd_inr_trend_pct_7d)}%</span></span>`);
+    items.push(`<span class="tick-item" style="color:var(--text-faint)">source: ${d.source}</span>`);
+    document.getElementById('fxTicker').innerHTML = items.join('') + items.join('');
+  }catch(e){ /* leave placeholder */ }
+}
+
+// ---------- commodities (backend simulation) ----------
+async function loadCommodities(){
+  if(!backendUp) return;
+  try{
+    const r = await fetch(API_BASE+'/api/commodities');
+    const d = await r.json();
+    const wrap = document.getElementById('commodityCards'); wrap.innerHTML='';
+    Object.entries(d.values).forEach(([name,val])=>{
+      const hist = d.history[name];
+      const up = hist[hist.length-1] >= hist[hist.length-2];
+      const card=document.createElement('div'); card.className='rate-card';
+      card.innerHTML=`<div class="rate-top"><span class="rate-name">${name}</span></div>
+        <div class="rate-val" style="color:${up?'var(--green)':'var(--red)'}">${val}</div>
+        ${sparkSVG(hist, up?'#33C481':'#E2554F')}`;
+      wrap.appendChild(card);
+    });
+    const note=document.createElement('div'); note.className='src-note'; note.textContent = d.source;
+    wrap.appendChild(note);
+  }catch(e){}
+}
+
+// ---------- sparkline ----------
+function sparkSVG(data,color){
+  const w=100,h=26,max=Math.max(...data),min=Math.min(...data),range=(max-min)||1;
+  const pts=data.map((d,i)=>`${(i/(data.length-1))*w},${h-((d-min)/range)*h}`).join(' ');
+  return `<svg class="spark" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none"><polyline points="${pts}" fill="none" stroke="${color}" stroke-width="1.5"/></svg>`;
+}
+
+// ---------- rate cards (simulated freight) ----------
+function renderRateCards(prevRates){
+  const wrap=document.getElementById('rateCards'); wrap.innerHTML='';
+  vesselClasses.forEach(v=>{
+    const val=liveRates[v];
+    const prev=prevRates? prevRates[v] : val;
+    const deltaPct=(((val-prev)/prev)*100).toFixed(2);
+    const up = deltaPct>=0;
+    const card=document.createElement('div'); card.className='rate-card';
+    card.innerHTML=`<div class="rate-top"><span class="rate-name">${v}</span><span class="rate-delta ${up?'up':'down'}">${up?'▲':'▼'}${Math.abs(deltaPct)}%</span></div>
+      <div class="rate-val" style="color:${up?'var(--green)':'var(--red)'}">$${val.toFixed(2)}</div>
+      ${sparkSVG(history[v], up?'#33C481':'#E2554F')}`;
+    wrap.appendChild(card);
+  });
+}
+renderRateCards();
+
+function tickRates(){
+  const prev = {...liveRates};
+  vesselClasses.forEach(v=>{
+    const drift=(Math.random()-0.5)*0.06*liveRates[v];
+    liveRates[v]=Math.max(3, liveRates[v]+drift);
+    history[v].push(liveRates[v]); if(history[v].length>24) history[v].shift();
+  });
+  renderRateCards(prev);
+  renderTicker();
+}
+
+// ---------- live rates: real WebSocket when backend is up, local sim as fallback ----------
+let ws = null, wsConnected = false;
+function connectWS(){
+  try{
+    ws = new WebSocket(API_BASE.replace('http','ws') + '/ws/rates');
+    ws.onopen = () => { wsConnected = true; };
+    ws.onclose = () => { wsConnected = false; setTimeout(connectWS, 4000); };
+    ws.onerror = () => { wsConnected = false; };
+    ws.onmessage = (event) => {
+      const msg = JSON.parse(event.data);
+      if(msg.type === 'rate_tick'){
+        const prev = {...liveRates};
+        liveRates = msg.rates;
+        vesselClasses.forEach(v=>{ history[v].push(liveRates[v]); if(history[v].length>24) history[v].shift(); });
+        renderRateCards(prev);
+        renderTicker();
+      }
+    };
+  }catch(e){ console.error('WebSocket connect failed:', e); }
+}
+connectWS();
+setInterval(()=>{ if(!wsConnected) tickRates(); }, 1800);
+
+// ---------- market signals (real: oil + dry-bulk shipping equities via Yahoo Finance) ----------
+async function loadMarketSignals(){
+  if(!backendUp) return;
+  try{
+    const r = await fetch(API_BASE+'/api/market-signals');
+    const d = await r.json();
+    const wrap = document.getElementById('marketSignals');
+    if(!wrap) return;
+    const oilCls = d.oil_change_pct >= 0 ? 'up' : 'down';
+    let html = `<div class="rate-card"><div class="rate-top"><span class="rate-name">WTI Crude Oil</span>
+      <span class="rate-delta ${oilCls}">${d.oil_change_pct>=0?'▲':'▼'}${Math.abs(d.oil_change_pct)}%</span></div>
+      <div class="rate-val" style="font-size:15px; color:${oilCls==='up'?'var(--red)':'var(--green)'}">${d.oil_usd!=null?'$'+d.oil_usd.toFixed(2):'—'}</div></div>`;
+    Object.entries(d.equities||{}).forEach(([sym,eq])=>{
+      const cls = eq.change_pct>=0?'up':'down';
+      html += `<div class="rate-card"><div class="rate-top"><span class="rate-name">${sym} (dry bulk)</span>
+        <span class="rate-delta ${cls}">${eq.change_pct>=0?'▲':'▼'}${Math.abs(eq.change_pct)}%</span></div>
+        <div class="rate-val" style="font-size:15px;">$${eq.close.toFixed(2)}</div></div>`;
+    });
+    html += `<div class="src-note">${d.source}<br>These real signals nudge the freight rate model — oil price up = fuel cost pressure; dry-bulk shipper stocks up = market sentiment improving. Baltic Exchange's own index is licensed/paid, so it isn't used directly.</div>`;
+    wrap.innerHTML = html;
+  }catch(e){}
+}
+setInterval(()=>{ if(backendUp) loadMarketSignals(); }, 20000);
+
+// ---------- forecast chart ----------
+function genForecast(){
+  const days=Array.from({length:18},(_,i)=>`D+${i*5}`);
+  let base=14+Math.random()*4;
+  const mid=[],lo=[],hi=[];
+  days.forEach((_,i)=>{
+    base += (Math.random()-0.48)*0.6;
+    mid.push(+base.toFixed(2)); lo.push(+(base*0.9).toFixed(2)); hi.push(+(base*1.1).toFixed(2));
+  });
+  return {days,mid,lo,hi};
+}
+let fc=genForecast();
+let chart=null;
+window.__libReady.chart.then(ok=>{
+  if(!ok){
+    document.getElementById('fcChart').outerHTML = `<div class="src-note" style="padding:20px 0;">⚠ Chart.js failed to load from both cdnjs and jsdelivr — check whether your network/firewall blocks either domain. Everything else on this page still works.</div>`;
+    return;
+  }
+  const ctx=document.getElementById('fcChart').getContext('2d');
+  chart=new Chart(ctx,{
+    type:'line',
+    data:{labels:fc.days, datasets:[
+      {label:'Upper band', data:fc.hi, borderWidth:0, pointRadius:0, backgroundColor:'rgba(53,183,168,0.10)', fill:'+1'},
+      {label:'Forecast rate', data:fc.mid, borderColor:'#35B7A8', backgroundColor:'transparent', borderWidth:2, pointRadius:0, tension:0.3},
+      {label:'Lower band', data:fc.lo, borderWidth:0, pointRadius:0, backgroundColor:'rgba(53,183,168,0.10)', fill:false},
+    ]},
+    options:{responsive:true, maintainAspectRatio:false, animation:false, plugins:{legend:{display:false}},
+      scales:{x:{ticks:{color:'#8993A1', font:{size:9}}, grid:{color:'#1C2530'}}, y:{ticks:{color:'#8993A1', font:{size:9}}, grid:{color:'#1C2530'}}}}
+  });
+});
+function refreshChart(){ if(!chart) return; fc=genForecast(); chart.data.labels=fc.days; chart.data.datasets[0].data=fc.hi; chart.data.datasets[1].data=fc.mid; chart.data.datasets[2].data=fc.lo; chart.update();}
+document.getElementById('fcRoute').addEventListener('change',refreshChart);
+document.getElementById('fcVessel').addEventListener('change',refreshChart);
+
+// ---------- map ----------
+let map, routeLine;
+function initMap(){
+  map = L.map('routeMap', {zoomControl:true, attributionControl:true}).setView([5,90], 2);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution:'&copy; OpenStreetMap contributors', subdomains:'abc', maxZoom:19, className:'dark-tiles',
+  }).addTo(map);
+  ports.forEach(p=>{
+    L.circleMarker([p.lat,p.lon], {radius:6, color:congColor(p.congestion).replace('var(--green)','#33C481').replace('var(--blue)','#5B7FA6').replace('var(--red)','#E2554F'), fillOpacity:0.9})
+      .addTo(map).bindPopup(`<b>${p.name}</b><br>Draft ${p.draft}m · Congestion ${p.congestion}%`);
+  });
+  Object.entries(origins).forEach(([name,o])=>{
+    L.circleMarker([o.lat,o.lon], {radius:6, color:'#5B7FA6', fillOpacity:0.9}).addTo(map).bindPopup(`<b>${name}</b> (load port)`);
+  });
+}
+function drawRoute(originName, destName, riskLevel){
+  if(!map) return;
+  const o = origins[originName]; const d = ports.find(p=>p.name===destName);
+  if(!o || !d) return;
+  if(routeLine) map.removeLayer(routeLine);
+  const color = riskLevel==='High' ? '#E2554F' : riskLevel==='Moderate' ? '#5B7FA6' : '#33C481';
+  routeLine = L.polyline([[o.lat,o.lon],[d.lat,d.lon]], {color, weight:2.5, dashArray:'6 4'}).addTo(map);
+  map.invalidateSize();
+  map.fitBounds(routeLine.getBounds(), {padding:[40,40]});
+}
+
+// ---------- live AIS ships (aisstream.io, relayed through our backend) ----------
+let shipMarkers = {};
+function shipIcon(course){
+  const c = course || 0;
+  return L.divIcon({
+    className: 'ship-icon',
+    html: `<div style="width:0;height:0;border-left:4px solid transparent;border-right:4px solid transparent;border-bottom:9px solid #35B7A8; transform:rotate(${c}deg); transform-origin:center; filter:drop-shadow(0 0 2px #000);"></div>`,
+    iconSize:[9,9], iconAnchor:[4,4],
+  });
+}
+let shipsWS = null;
+function connectShipsWS(){
+  try{
+    shipsWS = new WebSocket(API_BASE.replace('http','ws') + '/ws/ships');
+    shipsWS.onmessage = (event) => {
+      if(!map) return;
+      const msg = JSON.parse(event.data);
+      if(msg.type !== 'ship_position' || msg.lat==null || msg.lon==null) return;
+      if(shipMarkers[msg.mmsi]){
+        shipMarkers[msg.mmsi].setLatLng([msg.lat, msg.lon]);
+        shipMarkers[msg.mmsi].setIcon(shipIcon(msg.course));
+      } else {
+        shipMarkers[msg.mmsi] = L.marker([msg.lat, msg.lon], {icon: shipIcon(msg.course)}).addTo(map)
+          .bindPopup(`<b>${msg.name}</b><br>MMSI ${msg.mmsi}<br>${(msg.speed_knots||0).toFixed(1)} kn, course ${(msg.course||0).toFixed(0)}°`);
+      }
+    };
+    shipsWS.onclose = () => setTimeout(connectShipsWS, 5000);
+    shipsWS.onerror = () => {};
+  }catch(e){ console.error('Ship WebSocket failed:', e); }
+}
+
+window.__libReady.leaflet.then(ok=>{
+  if(!ok){
+    document.getElementById('routeMap').outerHTML = `<div class="src-note" style="padding:20px;">⚠ Leaflet failed to load from both cdnjs and jsdelivr — check whether your network/firewall blocks either domain. Everything else on this page still works.</div>`;
+    return;
+  }
+  try{
+    initMap();
+    setTimeout(()=>{ if(map) map.invalidateSize(); }, 200);
+    window.addEventListener('resize', ()=>{ if(map) map.invalidateSize(); });
+    connectShipsWS();
+  }catch(e){
+    console.error('Map init failed:', e);
+    document.getElementById('routeMap').outerHTML = `<div class="src-note" style="padding:20px;">⚠ Map failed to initialise: ${e.message}</div>`;
+  }
+});
+
+// ---------- weather panel ----------
+function riskClass(level){ return level==='High'?'risk-high':level==='Moderate'?'risk-moderate':'risk-low'; }
+function renderWeather(loc, w){
+  document.getElementById('weatherLoc').textContent = loc.toUpperCase();
+  document.getElementById('weatherBody').innerHTML = `
+    <div class="weather-box">
+      <div class="weather-temp">${w.temperature_c!=null? w.temperature_c.toFixed(1)+'°C' : '—'}</div>
+      <div class="risk-badge ${riskClass(w.risk_level)}">${w.risk_level.toUpperCase()} RISK</div>
+    </div>
+    <div style="color:var(--text-dim); font-size:10.5px;">Wind ${w.wind_speed_kmh} km/h · Precip ${w.precipitation_mm} mm</div>
+    <div class="src-note">${w.source}</div>`;
+}
+
+// ---------- cost breakdown ----------
+function renderCost(cost, fxSource){
+  const isLive = (fxSource||'').toLowerCase().includes('live');
+  document.getElementById('costBody').innerHTML = `
+    <table>
+      <tr><td>Freight</td><td style="text-align:right">${usd(cost.freight_usd)}</td></tr>
+      <tr><td>Port charges</td><td style="text-align:right">${usd(cost.port_charges_usd)}</td></tr>
+      <tr><td>Bunker adjustment</td><td style="text-align:right">${usd(cost.bunker_adjustment_usd)}</td></tr>
+      <tr><td>Agency fees</td><td style="text-align:right">${usd(cost.agency_fees_usd)}</td></tr>
+      <tr style="font-weight:700; color:var(--accent);"><td>TOTAL (USD)</td><td style="text-align:right">${usd(cost.total_usd)}</td></tr>
+      <tr style="font-weight:700; color:var(--accent);"><td>TOTAL (INR)</td><td style="text-align:right">${inr(cost.total_inr)}</td></tr>
+    </table>
+    <div class="src-note">Converted at USD/INR = ${cost.usd_inr_rate} ${isLive ? '(live rate)' : '(fallback rate — FX feed unreachable, see FX ticker above)'}</div>`;
+}
+
+// ---------- AI decision engine (backend) with local fallback ----------
+function localFallbackRecommendation(){
+  const dest = ports.find(p=>p.name===document.getElementById('calcDest').value);
+  const qty = readCargoMt();
+  const origin = document.getElementById('calcOrigin').value;
+  let candidates = vesselClasses.filter(v=>vesselSpecs[v].loaMax<=dest.loa+15);
+  const dwtMid = {Handysize:34000, Supramax:55000, Panamax:72000, Capesize:165000};
+  candidates.sort((a,b)=>Math.abs(dwtMid[a]-qty)-Math.abs(dwtMid[b]-qty));
+  let best = candidates[0] || 'Handysize';
+  const congestionFlag = dest.congestion>60;
+  const rate = liveRates[best].toFixed(2);
+  document.getElementById('recBox').innerHTML = `
+    <div class="rec-title">Recommended: ${best}<span class="rec-action action-monitor">LOCAL FALLBACK</span></div>
+    <div class="rec-why">${origin} → ${dest.name}: rate ≈ $${rate}/t. ${congestionFlag ? `<span class="rec-flag">⚠ ${dest.name} congestion elevated (${dest.congestion}%).</span>` : ''}
+    <br><i>Backend offline — this is the local simplified engine. Start the backend for weather/FX/cost-aware AI decisions.</i></div>`;
+}
+
+let decisionInFlight = false;
+async function runDecision(){
+  if(decisionInFlight) return;
+  decisionInFlight = true;
+  const btn = document.querySelector('button[onclick="runDecision()"]');
+  const origBtnText = btn.textContent;
+  btn.textContent = 'RUNNING…'; btn.disabled = true;
+
+  const origin = document.getElementById('calcOrigin').value;
+  const destination = document.getElementById('calcDest').value;
+  const cargo_mt = readCargoMt();
+  const contract_term = document.getElementById('calcTerm').value;
+
+  try{
+    if(!backendUp){ localFallbackRecommendation(); return; }
+
+    document.getElementById('recBox').innerHTML = `<div class="rec-why">Running decision engine…</div>`;
+    const r = await fetch(API_BASE+'/api/decision', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({origin, destination, cargo_mt, contract_term})
+    });
+    const d = await r.json();
+    if(d.error){ document.getElementById('recBox').innerHTML = `<div class="rec-why">${d.error}</div>`; return; }
+
+    const actionCls = d.action==='BOOK NOW' ? 'action-book' : d.action==='MONITOR / WAIT' ? 'action-wait' : 'action-monitor';
+    document.getElementById('recBox').innerHTML = `
+      <div class="rec-title">Recommended: ${d.recommended_vessel}<span class="rec-action ${actionCls}">${d.action}</span></div>
+      <div class="kpi-row">
+        <div class="kpi">Confidence<b>${d.confidence_pct}%</b></div>
+        <div class="kpi">Delivery probability<b>${d.delivery_probability_pct}%</b></div>
+        <div class="kpi">Transit time<b>${d.transit_days} days</b></div>
+        <div class="kpi">60d rate trend<b>${d.forecast_trend_usd_per_t_60d>0?'+':''}${d.forecast_trend_usd_per_t_60d} $/t</b></div>
+      </div>
+      <div class="rec-why" style="margin-top:2px; color:var(--text-faint); font-size:9.5px;">${d.distance_nm.toLocaleString('en-US')} nm great-circle distance, at typical ${d.recommended_vessel} service speed.</div>
+      <div class="rec-why"><b>Why:</b><ul>${d.rationale.map(r=>`<li>${r}</li>`).join('')}</ul></div>`;
+
+    renderWeather(destination, d.weather);
+    renderCost(d.cost, d.fx.source);
+    drawRoute(origin, destination, d.weather.risk_level);
+  }catch(e){
+    document.getElementById('recBox').innerHTML = `<div class="rec-why">Could not reach backend decision engine — falling back to local logic.</div>`;
+    localFallbackRecommendation();
+  }finally{
+    decisionInFlight = false;
+    btn.textContent = origBtnText; btn.disabled = false;
+  }
+}
+
+// ---------- idle & repositioning advisor ----------
+async function runIdleAdvisor(){
+  const box = document.getElementById('idleResult');
+  if(!backendUp){ box.innerHTML = `<div class="src-note">Backend offline — start it to run the repositioning advisor.</div>`; return; }
+  const current_location = document.getElementById('idlePort').value;
+  const vessel_class = document.getElementById('idleVessel').value;
+  box.innerHTML = `<div class="src-note">Calculating repositioning options…</div>`;
+  try{
+    const r = await fetch(API_BASE+'/api/idle-advisor', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({current_location, vessel_class})
+    });
+    const d = await r.json();
+    if(d.error){ box.innerHTML = `<div class="src-note">${d.error}</div>`; return; }
+    const rows = d.options.map((o,i)=>`<tr class="${i===0?'best-row':''}">
+      <td>${o.origin}${i===0?' ★':''}</td>
+      <td>${o.distance_nm.toLocaleString('en-US')} nm</td>
+      <td>${o.ballast_days} days</td>
+      <td>${usd(o.ballast_cost_usd)}</td>
+      <td>${usd(o.expected_revenue_usd)}</td>
+      <td style="color:${o.net_score_usd>=0?'var(--green)':'var(--red)'}; font-weight:700;">${usd(o.net_score_usd)}</td>
+    </tr>`).join('');
+    box.innerHTML = `
+      <div class="rec-title" style="font-size:11px;">Best repositioning: ${d.recommended_origin}</div>
+      <div class="rec-why" style="margin-bottom:8px;">${d.rationale}</div>
+      <table><thead><tr><th>ORIGIN</th><th>DISTANCE</th><th>BALLAST TIME</th><th>BALLAST COST</th><th>EXPECTED REVENUE</th><th>NET SCORE</th></tr></thead>
+      <tbody>${rows}</tbody></table>`;
+  }catch(e){ box.innerHTML = `<div class="src-note">Idle advisor request failed — check backend logs.</div>`; }
+}
+
+async function runStrategyCompare(){
+  const tbody = document.querySelector('#strategyTable tbody');
+  if(!backendUp){ tbody.innerHTML = `<tr><td colspan="7" class="src-note">Backend offline — start it to run cross-origin strategy comparison.</td></tr>`; return; }
+  const destination = document.getElementById('calcDest').value;
+  const cargo_mt = readCargoMt();
+  tbody.innerHTML = `<tr><td colspan="7" class="src-note">Comparing strategies…</td></tr>`;
+  try{
+    const r = await fetch(API_BASE+'/api/strategy-compare', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({destination, cargo_mt, contract_term: document.getElementById('calcTerm').value})
+    });
+    const d = await r.json();
+    tbody.innerHTML='';
+    d.options.forEach((o,i)=>{
+      const tr=document.createElement('tr'); if(i===0) tr.className='best-row';
+      tr.innerHTML = `<td>${o.origin}${i===0?' ★':''}</td><td>${o.vessel}</td><td>${o.action}</td>
+        <td>${usd(o.total_cost_usd)}</td><td>${inr(o.total_cost_inr)}</td>
+        <td>${o.delivery_probability_pct}%</td><td>${o.weather_risk}</td>`;
+      tbody.appendChild(tr);
+    });
+  }catch(e){ tbody.innerHTML = `<tr><td colspan="7" class="src-note">Comparison failed — check backend logs.</td></tr>`; }
+}
+
+// ---------- report downloads ----------
+function downloadReport(kind){
+  const origin = document.getElementById('calcOrigin').value;
+  const destination = document.getElementById('calcDest').value;
+  const cargo_mt = readCargoMt();
+  const contract_term = document.getElementById('calcTerm').value;
+  if(!backendUp){ alert('Start the PRAVAH backend to generate downloadable reports (see README).'); return; }
+  const url = `${API_BASE}/api/report/${kind}?origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(destination)}&cargo_mt=${cargo_mt}&contract_term=${encodeURIComponent(contract_term)}`;
+  window.open(url, '_blank');
+}
+
+// ---------- alerts feed ----------
+const alertBank = [
+  {tag:'RISK', cls:'tag-risk', text:'Cyclone advisory issued for Bay of Bengal — possible berthing delays at Paradip, Dhamra.'},
+  {tag:'WARN', cls:'tag-warn', text:'Vizag congestion crossed 60% threshold — average wait time up 1.4 days week-on-week.'},
+  {tag:'INFO', cls:'tag-info', text:'Dry-bulk shipping equities firming on Pacific coal demand — model rates nudged up accordingly.'},
+  {tag:'RISK', cls:'tag-risk', text:'Port strike reported at a competing Indonesian load port — check backhaul exposure.'},
+  {tag:'INFO', cls:'tag-info', text:'Bunker (VLSFO) proxy flat week-on-week — limited near-term rate impact expected.'},
+  {tag:'WARN', cls:'tag-warn', text:'Gangavaram berth 3 under maintenance until next week — effective capacity reduced.'},
+];
+let lastAlertText = null;
+function pushAlert(item){
+  let a = item;
+  if(!a){
+    let attempts = 0;
+    do{ a = alertBank[Math.floor(Math.random()*alertBank.length)]; attempts++; }
+    while(a.text === lastAlertText && attempts < 10);
+  }
+  lastAlertText = a.text;
+  const feed=document.getElementById('alertFeed');
+  const div=document.createElement('div'); div.className='alert-item';
+  const t=new Date(); const time=t.toTimeString().slice(0,5);
+  div.innerHTML=`<span class="alert-time">${time}</span><span class="alert-tag ${a.cls}">${a.tag}</span><span>${a.text}</span>`;
+  feed.prepend(div);
+  while(feed.children.length>8) feed.removeChild(feed.lastChild);
+}
+function shuffledSample(arr, n){
+  const copy = [...arr];
+  for(let i=copy.length-1; i>0; i--){ const j=Math.floor(Math.random()*(i+1)); [copy[i],copy[j]]=[copy[j],copy[i]]; }
+  return copy.slice(0, n);
+}
+try{
+  shuffledSample(alertBank, 3).forEach(a => pushAlert(a));
+  setInterval(() => pushAlert(), 6000);
+}catch(e){ console.error('Alerts init failed:', e); }
+
+let systemAlertsShown = new Set();
+function checkSystemStatus(source, label){
+  if(systemAlertsShown.has(label)) return;
+  if((source||'').toLowerCase().includes('fallback')){
+    pushAlert({tag:'INFO', cls:'tag-info', text:`SYSTEM: ${label} feed unreachable from this backend — using fallback values. Check network/firewall.`});
+    systemAlertsShown.add(label);
+  }
+}
+setInterval(async ()=>{
+  if(!backendUp) return;
+  try{ const fx = await (await fetch(API_BASE+'/api/fx')).json(); checkSystemStatus(fx.source, 'FX (Frankfurter)'); }catch(e){}
+  try{ const ms = await (await fetch(API_BASE+'/api/market-signals')).json(); checkSystemStatus(ms.source, 'Market signals (Yahoo Finance)'); }catch(e){}
+}, 10000);
+</script>
+</body>
+</html>
