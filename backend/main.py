@@ -21,14 +21,18 @@ import os
 import random
 from datetime import datetime, timedelta
 from io import BytesIO
+from pathlib import Path
 from typing import Dict, List, Optional
 
 import httpx
 import websockets
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Query
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import PlainTextResponse, StreamingResponse
+from fastapi.responses import PlainTextResponse, StreamingResponse, FileResponse
 from pydantic import BaseModel
+
+BASE_DIR = Path(__file__).resolve().parent
+FRONTEND_FILE = BASE_DIR / "pravah_terminal.html"
 
 app = FastAPI(title="PRAVAH API — Predictive Routing And Voyage Analytics Hub")
 
@@ -885,4 +889,13 @@ async def report_pdf(origin: str, destination: str, cargo_mt: float, contract_te
 
 @app.get("/")
 def root():
+    """Serves the dashboard itself, so the whole app lives at one URL with
+    no separate frontend host and no cross-origin requests needed."""
+    if FRONTEND_FILE.exists():
+        return FileResponse(FRONTEND_FILE)
+    return {"status": "ok", "service": "pravah-api", "note": "pravah_terminal.html not found next to main.py"}
+
+
+@app.get("/api/health")
+def health():
     return {"status": "ok", "service": "pravah-api"}

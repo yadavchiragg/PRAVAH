@@ -1,20 +1,47 @@
 # PRAVAH — Predictive Routing And Voyage Analytics Hub (backend)
 
-FastAPI + WebSocket server behind the terminal dashboard.
+FastAPI + WebSocket server that also serves the dashboard itself — one process,
+one port, one URL, both locally and once deployed.
 
-## Run it
+## Run it locally
 
 ```bash
 cd backend
 pip install -r requirements.txt --break-system-packages   # or use a venv
 uvicorn main:app --reload --port 8000
-AISSTREAM_API_KEY=fddc6492269ad6a9c6484023d9bd3af87d9b7145 uvicorn main:app --reload --port 8000
 ```
 
-Check it's alive: open http://localhost:8000/ — you should see `{"status":"ok",...}`.
+Open **http://localhost:8000/** — that's the full dashboard now, not a JSON blob.
+(The old JSON health check moved to `/api/health`.)
+
+`pravah_terminal.html` must sit in this same `backend/` folder — the server
+looks for it right next to `main.py`.
+
+## Deploy it for free (Render.com)
+
+Render's free web service tier costs nothing, needs no credit card, and
+supports WebSockets (unlike most free serverless hosts). The one tradeoff:
+a free service sleeps after 15 minutes of no traffic and takes ~30-50 seconds
+to wake up on the next visit — open the URL a minute before you need it live.
+
+1. Push this whole `backend/` folder (main.py, pravah_terminal.html,
+   requirements.txt) to a GitHub repo.
+2. Go to render.com, sign up free, click **New → Web Service**, connect
+   your GitHub repo.
+3. Set:
+   - **Root Directory**: `backend` (or wherever this folder lives in your repo)
+   - **Build Command**: `pip install -r requirements.txt`
+   - **Start Command**: `uvicorn main:app --host 0.0.0.0 --port $PORT`
+4. Under **Environment**, add `AISSTREAM_API_KEY` with your key if you have one.
+5. Click **Create Web Service**. First deploy takes a few minutes.
+6. You'll get a URL like `https://pravah-xxxx.onrender.com` — that's your
+   live website. Open it directly; no separate frontend hosting, no config
+   changes needed, since the frontend auto-detects its own host.
 
 ## Endpoints
 
+- `GET /` — serves the dashboard (pravah_terminal.html)
+- `GET /api/health` — JSON health check
 - `WS /ws/rates` — pushes a JSON tick every ~1.8s: `{type, timestamp, rates: {Handysize, Supramax, Panamax, Capesize}}`
 - `GET /api/forecast?route=...&vessel_class=...` — forecast points with confidence band (calibrated simulation)
 - `POST /api/recommend` — legacy simple vessel recommendation (kept for backward compatibility)
@@ -48,7 +75,7 @@ If you don't set the key, this feature is silently skipped — the map still wor
 | Weather + voyage risk | **Real**, live | Open-Meteo |
 | FX rates + 7-day trend | **Real**, live | Frankfurter/ECB |
 | Vessel positions on map | **Real**, live | AISStream.io (needs your free API key) |
-| Oil price + dry-bulk shipping stocks | **Real**, live | Stooq |
+| Oil price + dry-bulk shipping stocks | **Real**, live | Yahoo Finance (free chart endpoint) |
 | Freight rates (per vessel class) | Calibrated model, **live-adjusted** by the real oil/equity signals above | — |
 | Commodities (coal, iron ore, inflation) | Calibrated simulation | — |
 | Port draft/LOA/berth data | Real reference figures, but static — verify against current port-authority circulars before presenting as fact | — |
