@@ -4,8 +4,9 @@
 <meta charset="UTF-8">
 <title>PRAVAH — Predictive Routing And Voyage Analytics Hub</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<!-- Leaflet ships its layout rules in this file. Use the non-minified CDN asset: the old leaflet.min.css URL is not consistently served. -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css" onerror="this.onerror=null;this.href='https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css'">
 <script>
   window.__libReady = {};
   function loadLib(primary, fallback){
@@ -43,17 +44,17 @@
     --text:#E4E7EA; --text-dim:#8993A1; --text-faint:#57616D;
   }
   *{box-sizing:border-box; margin:0; padding:0;}
-  body{background:var(--bg); color:var(--text); font-family:'IBM Plex Mono',monospace; font-size:12px; padding:14px; min-height:100vh;}
+  body{background:radial-gradient(circle at 70% -10%,#12302e 0,transparent 27rem),var(--bg); color:var(--text); font-family:'DM Sans',sans-serif; font-size:12px; padding:18px; min-height:100vh;}
 
   .hdr{display:flex; align-items:center; justify-content:space-between; padding-bottom:10px; border-bottom:1px solid var(--border-strong); margin-bottom:8px; flex-wrap:wrap; gap:8px;}
   .hdr-left{display:flex; align-items:baseline; gap:14px; flex-wrap:wrap;}
-  .logo{font-size:18px; font-weight:700; color:var(--accent); letter-spacing:1px;}
-  .logo span{color:var(--text-dim); font-weight:400; font-size:11px;}
+  .logo{font-family:'IBM Plex Mono',monospace; font-size:18px; font-weight:700; color:var(--accent); letter-spacing:1px;}
+  .logo span{color:var(--text-dim); font-weight:400; font-size:10px;}
   .live-dot{position:relative; display:inline-block; width:7px; height:7px; border-radius:50%; background:var(--green); margin-right:6px;}
   .live-dot::before{content:''; position:absolute; top:-5px; left:-5px; width:17px; height:17px; border-radius:50%; border:1px solid var(--green); opacity:0.45; animation:sweep 2.2s ease-out infinite;}
   .live-dot.off{background:var(--red);} .live-dot.off::before{border-color:var(--red); animation:none; opacity:0;}
   @keyframes sweep{0%{transform:scale(0.4); opacity:0.6;} 100%{transform:scale(1.6); opacity:0;}}
-  .hdr-right{display:flex; gap:22px; font-size:11px; color:var(--text-dim); flex-wrap:wrap;}
+  .hdr-right{display:flex; gap:22px; font-family:'IBM Plex Mono',monospace; font-size:10px; color:var(--text-dim); flex-wrap:wrap;}
   .hdr-right b{color:var(--text); font-weight:600;}
 
   .ticker-wrap{overflow:hidden; white-space:nowrap; border:1px solid var(--border); background:var(--panel); padding:6px 0; margin-bottom:6px;}
@@ -66,8 +67,8 @@
   .up{color:var(--green);} .down{color:var(--red);}
 
   /* ---- tab navigation ---- */
-  .tabbar{display:flex; gap:2px; border-bottom:1px solid var(--border-strong); margin-bottom:16px; overflow-x:auto;}
-  .tab-btn{background:transparent; border:none; color:var(--text-faint); font-family:inherit; font-size:10.5px; letter-spacing:1.2px; font-weight:600; padding:10px 16px; cursor:pointer; white-space:nowrap; border-bottom:2px solid transparent; transition:color .15s;}
+  .tabbar{display:flex; gap:4px; border-bottom:1px solid var(--border-strong); margin-bottom:18px; overflow-x:auto;}
+  .tab-btn{background:transparent; border:none; color:var(--text-faint); font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:1.1px; font-weight:600; padding:11px 16px; cursor:pointer; white-space:nowrap; border-bottom:2px solid transparent; transition:color .15s,background .15s;}
   .tab-btn:hover{color:var(--text-dim);}
   .tab-btn.active{color:var(--accent); border-bottom:2px solid var(--accent);}
   .tab-panel{display:none;}
@@ -84,13 +85,13 @@
   @media (max-width: 780px){ .grid.wide{grid-template-columns: 1fr;} }
   .stack{display:flex; flex-direction:column; gap:10px;}
 
-  .panel{background:var(--panel); border:1px solid var(--border); border-radius:3px; margin-bottom:10px;}
+  .panel{background:linear-gradient(145deg,rgba(20,27,36,.98),rgba(13,18,25,.98)); border:1px solid var(--border); border-radius:7px; margin-bottom:10px; box-shadow:0 16px 34px rgba(0,0,0,.13); overflow:hidden;}
   .panel-hd{display:flex; align-items:center; justify-content:space-between; padding:9px 12px; border-bottom:1px solid var(--border); flex-wrap:wrap; gap:4px;}
-  .panel-hd h2{font-size:10.5px; letter-spacing:1.5px; color:var(--text-dim); font-weight:600;}
+  .panel-hd h2{font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:1.4px; color:var(--text-dim); font-weight:600;}
   .panel-hd small{color:var(--text-faint); font-size:9px;}
   .panel-body{padding:12px;}
 
-  .hero{background:var(--panel); border:1px solid var(--border-strong); border-top:2px solid var(--accent); border-radius:3px; position:relative;}
+  .hero{background:linear-gradient(145deg,#121b22,#0e151b); border:1px solid var(--border-strong); border-top:2px solid var(--accent); border-radius:7px; position:relative; box-shadow:0 16px 34px rgba(0,0,0,.16);}
   .hero::before, .hero::after{content:''; position:absolute; width:9px; height:9px; border-top:1.5px solid var(--accent); pointer-events:none;}
   .hero::before{top:-1px; left:-1px; border-left:1.5px solid var(--accent);}
   .hero::after{top:-1px; right:-1px; border-right:1.5px solid var(--accent); border-top:1.5px solid var(--accent);}
@@ -105,13 +106,14 @@
   .bar-track{width:100%; height:5px; background:#161C22; border-radius:3px; overflow:hidden;}
   .bar-fill{height:100%; border-radius:3px;}
 
-  select, input{background:#0C1016; border:1px solid var(--border-strong); color:var(--text); font-family:inherit; font-size:11px; padding:5px 6px; border-radius:2px; outline:none;}
+  select, input{background:#0C1016; border:1px solid var(--border-strong); color:var(--text); font-family:'DM Sans',sans-serif; font-size:12px; padding:7px 8px; border-radius:4px; outline:none; width:100%;}
   select:focus, input:focus{border-color:var(--accent);}
   label{display:block; font-size:9.5px; color:var(--text-faint); margin-bottom:3px; letter-spacing:.5px;}
   .field{margin-bottom:8px;}
   .row2{display:grid; grid-template-columns:1fr 1fr; gap:8px;}
   .row3{display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px;}
-  .btn{background:var(--accent); color:#062521; border:none; font-family:inherit; font-weight:700; font-size:11px; padding:8px 10px; border-radius:2px; cursor:pointer; letter-spacing:.5px; width:100%;}
+  .btn{background:var(--accent); color:#062521; border:none; font-family:'IBM Plex Mono',monospace; font-weight:700; font-size:10px; padding:10px; border-radius:4px; cursor:pointer; letter-spacing:.5px; width:100%; transition:transform .15s,background .15s;}
+  .btn:hover{transform:translateY(-1px);}
   .btn:hover{background:#49CBBB;}
   .btn.secondary{background:transparent; color:var(--accent); border:1px solid var(--accent-dim);}
   .btn.secondary:hover{background:var(--accent-soft);}
@@ -137,6 +139,8 @@
   .rate-val{font-size:16px; font-weight:700;}
   .rate-delta{font-size:10px; font-weight:600;}
   svg.spark{width:100%; height:26px; display:block; margin-top:4px;}
+  #rateCards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;}
+  #rateCards .rate-card{margin:0;}
 
   .weather-box{display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;}
   .weather-temp{font-size:24px; font-weight:700; color:var(--accent);}
@@ -146,9 +150,28 @@
   .risk-high{background:var(--red-soft); color:var(--red);}
   .src-note{color:var(--text-faint); font-size:9px; margin-top:6px; font-style:italic;}
 
-  #mapPanel{height:520px;}
-  #routeMap{height:100%; width:100%; border-radius:2px;}
+  #mapPanel{height:600px; position:relative;}
+  #mapPanel .panel-body{position:relative; height:calc(100% - 39px) !important;}
+  #routeMap{height:100%; width:100%; border-radius:0; background:radial-gradient(ellipse at 50% 45%,#173c46 0,#10262e 35%,#0a1218 78%);}
   .leaflet-container{background:#0A0E13 !important; font-family:'IBM Plex Mono',monospace;}
+  .leaflet-control-zoom a{background:#101820!important;color:#dce9e8!important;border-color:#2c3b44!important;}
+  .leaflet-control-attribution{background:rgba(10,14,19,.72)!important;color:#82909a!important;}
+  .map-hud{position:absolute;z-index:700;top:14px;left:14px;pointer-events:none;}
+  .map-hud__eyebrow,.map-hud__route{font-family:'IBM Plex Mono',monospace;display:table;}
+  .map-hud__eyebrow{font-size:9px;letter-spacing:1.1px;color:#a9b8bd;background:rgba(10,14,19,.86);border:1px solid rgba(80,104,111,.65);border-radius:4px 4px 0 0;padding:7px 9px 5px;}
+  .map-hud__route{font-size:13px;font-weight:600;color:#f0f5f4;background:rgba(10,14,19,.86);border:1px solid rgba(80,104,111,.65);border-top:0;border-radius:0 0 4px 4px;padding:4px 9px 8px;}
+  .map-legend{position:absolute;z-index:700;bottom:24px;left:14px;display:flex;gap:10px;align-items:center;background:rgba(10,14,19,.88);border:1px solid rgba(80,104,111,.65);border-radius:4px;padding:8px 10px;color:#a9b8bd;font-family:'IBM Plex Mono',monospace;font-size:9px;pointer-events:none;}
+  .map-legend i{width:18px;height:2px;display:inline-block;background:var(--accent);}
+  .map-legend .map-port{height:8px;width:8px;border-radius:50%;background:#33C481;}
+  .map-legend .map-ship{height:0;width:0;background:transparent;border-left:4px solid transparent;border-right:4px solid transparent;border-bottom:8px solid #35B7A8;}
+  .map-empty{position:absolute;z-index:650;inset:0;display:grid;place-items:center;color:#a9b8bd;font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.4px;pointer-events:none;}
+  .map-empty span{padding:9px 12px;background:rgba(10,14,19,.78);border:1px solid var(--border-strong);border-radius:4px;}
+  .workspace-brief{display:grid;grid-template-columns:1.2fr repeat(2,1fr);gap:1px;margin-top:14px;border:1px solid var(--border);border-radius:7px;overflow:hidden;background:var(--border);}
+  .brief-item{min-height:104px;padding:16px;background:linear-gradient(145deg,#111920,#0d141a);}
+  .brief-kicker{font-family:'IBM Plex Mono',monospace;color:var(--text-faint);font-size:9px;letter-spacing:1.2px;margin-bottom:8px;}
+  .brief-value{font-size:18px;font-weight:700;color:var(--text);line-height:1.15;margin-bottom:6px;}
+  .brief-value.accent{color:var(--accent)} .brief-value.green{color:var(--green)}
+  .brief-copy{font-size:11px;line-height:1.5;color:var(--text-dim);max-width:48rem;}
   .dark-tiles{ filter: grayscale(0.5) invert(1) brightness(0.82) contrast(1.2) hue-rotate(180deg) saturate(0.5); }
   .ship-icon{ background:transparent; border:none; }
 
@@ -168,6 +191,8 @@
   .legend span{display:inline-flex; align-items:center; gap:4px;}
   .dot{width:6px; height:6px; border-radius:50%; display:inline-block;}
   ::-webkit-scrollbar{width:6px;} ::-webkit-scrollbar-thumb{background:var(--border-strong); border-radius:3px;}
+  @media (max-width:780px){.workspace-brief{grid-template-columns:1fr}.brief-item{min-height:auto}#rateCards{grid-template-columns:1fr}}
+  @media (max-width:640px){body{padding:10px}.logo span{display:none}#mapPanel{height:480px}.map-hud{top:10px;left:10px}.map-legend{bottom:20px;left:10px;gap:7px;font-size:8px}.hdr-right{gap:10px}}
 </style>
 </head>
 <body>
@@ -254,6 +279,11 @@
       </div>
     </div>
   </div>
+  <div class="workspace-brief">
+    <div class="brief-item"><div class="brief-kicker">DECISION WORKFLOW</div><div class="brief-value accent">Plan → validate → book</div><div class="brief-copy">Set the cargo details, review the recommended vessel and cost, then export the decision record for your operations team.</div></div>
+    <div class="brief-item"><div class="brief-kicker">MODEL COVERAGE</div><div class="brief-value">3 origins · 5 ports</div><div class="brief-copy">Routes are evaluated against vessel fit, port constraints, forecast rate and voyage risk.</div></div>
+    <div class="brief-item"><div class="brief-kicker">UPDATE CADENCE</div><div class="brief-value green">Live when connected</div><div class="brief-copy">Market signals and ship positions refresh through the PRAVAH backend.</div></div>
+  </div>
 </div>
 
 <!-- ================= TAB: LIVE DATA ================= -->
@@ -285,10 +315,14 @@
 
     <div class="stack">
       <div class="panel">
-        <div class="panel-hd"><h2>COMMODITIES &amp; INFLATION</h2><small>CALIBRATED MODEL</small></div>
+        <div class="panel-hd"><h2>COMMODITIES &amp; INFLATION</h2><small>INDICATIVE · NOT A LIVE QUOTE FEED</small></div>
         <div class="panel-body" id="commodityCards">
           <div class="src-note">Connect backend to load this panel.</div>
         </div>
+      </div>
+      <div class="panel">
+        <div class="panel-hd"><h2>FREIGHT RATE INDICATORS</h2><small>MODELLED · LIVE-ADJUSTED BY MARKET SIGNALS</small></div>
+        <div class="panel-body" id="rateCards"></div>
       </div>
     </div>
 
@@ -299,11 +333,12 @@
           <div class="src-note">Connect backend to load real oil price and dry-bulk shipping equity signals (Yahoo Finance, free public data).</div>
         </div>
       </div>
-      <div class="panel">
-        <div class="panel-hd"><h2>LIVE RATES</h2><small>BY VESSEL CLASS · MODEL, LIVE-ADJUSTED</small></div>
-        <div class="panel-body" id="rateCards"></div>
-      </div>
     </div>
+  </div>
+  <div class="workspace-brief">
+    <div class="brief-item"><div class="brief-kicker">DATA QUALITY</div><div class="brief-value green">Feeds monitored</div><div class="brief-copy">The status bar above indicates whether live backend data is available for this session.</div></div>
+    <div class="brief-item"><div class="brief-kicker">PORT WATCH</div><div class="brief-value">5 east-coast terminals</div><div class="brief-copy">Congestion, draft and available berths are shown together for quicker feasibility checks.</div></div>
+    <div class="brief-item"><div class="brief-kicker">MARKET CONTEXT</div><div class="brief-value accent">Rate-sensitive signals</div><div class="brief-copy">Oil and dry-bulk market movement are used to keep the rate model context-aware.</div></div>
   </div>
 </div>
 
@@ -311,7 +346,15 @@
 <div class="tab-panel" data-tab="map">
   <div class="panel" id="mapPanel">
     <div class="panel-hd"><h2>ROUTE MAP</h2><small>ORIGIN → DESTINATION · RISK-COLOURED · LIVE AIS SHIPS</small></div>
-    <div class="panel-body" style="height:calc(100% - 34px); padding:0;"><div id="routeMap"></div></div>
+    <div class="panel-body" style="padding:0;">
+      <div id="routeMap"></div>
+      <div class="map-empty" id="mapEmpty"><span>Loading operational map…</span></div>
+      <div class="map-hud">
+        <div class="map-hud__eyebrow">ACTIVE CORRIDOR</div>
+        <div class="map-hud__route" id="mapRouteLabel">AUSTRALIA → PARADIP</div>
+      </div>
+      <div class="map-legend"><span><i></i> Route risk</span><span><i class="map-port"></i> Port</span><span><i class="map-ship"></i> AIS vessel</span></div>
+    </div>
   </div>
 </div>
 
@@ -349,6 +392,11 @@
       </div>
     </div>
   </div>
+  <div class="workspace-brief">
+    <div class="brief-item"><div class="brief-kicker">POSITIONING PRINCIPLE</div><div class="brief-value accent">Protect next-voyage value</div><div class="brief-copy">Use the advisor after discharge to balance ballast cost against likely revenue at each load origin.</div></div>
+    <div class="brief-item"><div class="brief-kicker">COMPARISON BASIS</div><div class="brief-value">Landed-cost first</div><div class="brief-copy">Compare origins on expected cost, vessel suitability, weather exposure and delivery confidence.</div></div>
+    <div class="brief-item"><div class="brief-kicker">RECOMMENDED ROUTINE</div><div class="brief-value green">Run before fixing</div><div class="brief-copy">Re-check assumptions before a fixture whenever weather, port status or market conditions move.</div></div>
+  </div>
 </div>
 
 <!-- ================= TAB: ALERTS ================= -->
@@ -356,6 +404,11 @@
   <div class="panel">
     <div class="panel-hd"><h2>RISK &amp; DISRUPTION ALERTS</h2><small>AUTO-GENERATED</small></div>
     <div class="panel-body alerts" id="alertFeed"></div>
+  </div>
+  <div class="workspace-brief">
+    <div class="brief-item"><div class="brief-kicker">ALERT PRIORITY</div><div class="brief-value">Risk → warning → info</div><div class="brief-copy">Act on red disruption events first; blue warnings deserve review before a routing decision.</div></div>
+    <div class="brief-item"><div class="brief-kicker">FEED BEHAVIOUR</div><div class="brief-value accent">Continuously updated</div><div class="brief-copy">The feed is refreshed as new operating conditions and system-status changes are detected.</div></div>
+    <div class="brief-item"><div class="brief-kicker">NEXT ACTION</div><div class="brief-value green">Review route exposure</div><div class="brief-copy">Open the decision engine to assess any alert against a specific cargo and destination.</div></div>
   </div>
 </div>
 
@@ -376,7 +429,10 @@ const API_BASE = 'http://localhost:8000';
 function switchTab(name){
   document.querySelectorAll('.tab-panel').forEach(p=>p.classList.toggle('active', p.dataset.tab===name));
   document.querySelectorAll('.tab-btn').forEach(b=>b.classList.toggle('active', b.dataset.tab===name));
-  if(name==='map' && typeof map!=='undefined' && map) setTimeout(()=>map.invalidateSize(), 60);
+  if(name==='map'){
+    ensureMap();
+    setTimeout(()=>{ if(map) map.invalidateSize({animate:false}); }, 80);
+  }
 }
 document.querySelectorAll('.tab-btn').forEach(b=>b.addEventListener('click', ()=>switchTab(b.dataset.tab)));
 
@@ -448,18 +504,26 @@ function renderPorts(){
 }
 renderPorts();
 
-// ---------- freight ticker (simulated) ----------
-function renderTicker(){
+// ---------- real-market ticker ----------
+// Route-level freight benchmarks are licensed, so this ticker deliberately
+// shows only the real public-market inputs we can verify from the backend.
+function renderTicker(market){
+  const ticker = document.getElementById('ticker');
+  if(!market || (!market.oil_usd && !Object.keys(market.equities||{}).length)){
+    ticker.innerHTML = '<span class="tick-item"><span class="rt">REAL MARKET SIGNALS</span>Awaiting live oil and dry-bulk equity quotes…</span>';
+    return;
+  }
   const items=[];
-  routes.forEach(r=>{
-    vesselClasses.forEach(v=>{
-      const val=(liveRates[v]*(0.85+Math.random()*0.3)).toFixed(2);
-      const delta=(Math.random()*4-2).toFixed(1);
-      const cls=delta>=0?'up':'down';
-      items.push(`<span class="tick-item"><span class="rt">${r} · ${v}</span><b>$${val}</b> <span class="${cls}">${delta>=0?'▲':'▼'}${Math.abs(delta)}%</span></span>`);
-    });
+  if(market.oil_usd != null){
+    const c=market.oil_change_pct>=0?'up':'down';
+    items.push(`<span class="tick-item"><span class="rt">WTI CRUDE</span><b>$${market.oil_usd.toFixed(2)}</b> <span class="${c}">${market.oil_change_pct>=0?'▲':'▼'}${Math.abs(market.oil_change_pct)}%</span></span>`);
+  }
+  Object.entries(market.equities||{}).forEach(([symbol,quote])=>{
+    const c=quote.change_pct>=0?'up':'down';
+    items.push(`<span class="tick-item"><span class="rt">${symbol} · DRY BULK</span><b>$${quote.close.toFixed(2)}</b> <span class="${c}">${quote.change_pct>=0?'▲':'▼'}${Math.abs(quote.change_pct)}%</span></span>`);
   });
-  document.getElementById('ticker').innerHTML = items.join('') + items.join('');
+  items.push(`<span class="tick-item" style="color:var(--text-faint)">LIVE SOURCE: ${market.source}</span>`);
+  ticker.innerHTML = items.join('') + items.join('');
 }
 renderTicker();
 
@@ -531,7 +595,6 @@ function tickRates(){
     history[v].push(liveRates[v]); if(history[v].length>24) history[v].shift();
   });
   renderRateCards(prev);
-  renderTicker();
 }
 
 // ---------- live rates: real WebSocket when backend is up, local sim as fallback ----------
@@ -549,7 +612,6 @@ function connectWS(){
         liveRates = msg.rates;
         vesselClasses.forEach(v=>{ history[v].push(liveRates[v]); if(history[v].length>24) history[v].shift(); });
         renderRateCards(prev);
-        renderTicker();
       }
     };
   }catch(e){ console.error('WebSocket connect failed:', e); }
@@ -577,6 +639,7 @@ async function loadMarketSignals(){
     });
     html += `<div class="src-note">${d.source}<br>These real signals nudge the freight rate model — oil price up = fuel cost pressure; dry-bulk shipper stocks up = market sentiment improving. Baltic Exchange's own index is licensed/paid, so it isn't used directly.</div>`;
     wrap.innerHTML = html;
+    renderTicker(d);
   }catch(e){}
 }
 setInterval(()=>{ if(backendUp) loadMarketSignals(); }, 20000);
@@ -616,12 +679,25 @@ document.getElementById('fcRoute').addEventListener('change',refreshChart);
 document.getElementById('fcVessel').addEventListener('change',refreshChart);
 
 // ---------- map ----------
-let map, routeLine;
+let map, routeLine, mapInitialised = false, mapTilesLoaded = false;
 function initMap(){
-  map = L.map('routeMap', {zoomControl:true, attributionControl:true}).setView([5,90], 2);
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution:'&copy; OpenStreetMap contributors', subdomains:'abc', maxZoom:19, className:'dark-tiles',
+  if(mapInitialised || !window.L) return;
+  mapInitialised = true;
+  map = L.map('routeMap', {zoomControl:true, attributionControl:true, worldCopyJump:true, preferCanvas:true}).setView([5,90], 3);
+  // Esri's public Canvas service requires no key. Its reference layer supplies
+  // English country/place labels, unlike standard OSM's native-language labels.
+  const tiles = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}', {
+    attribution:'Tiles &copy; Esri', maxZoom:16, crossOrigin:true,
   }).addTo(map);
+  L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}', {
+    attribution:'&copy; Esri', maxZoom:16, pane:'overlayPane', crossOrigin:true,
+  }).addTo(map);
+  tiles.once('load', ()=>{ mapTilesLoaded=true; const el=document.getElementById('mapEmpty'); if(el) el.remove(); });
+  tiles.on('tileerror', ()=>{
+    // The route, ports and vessels remain usable if a network blocks map tiles.
+    const el=document.getElementById('mapEmpty');
+    if(el && !mapTilesLoaded) el.innerHTML='<span>Base map unavailable · route telemetry remains active</span>';
+  });
   ports.forEach(p=>{
     L.circleMarker([p.lat,p.lon], {radius:6, color:congColor(p.congestion).replace('var(--green)','#33C481').replace('var(--blue)','#5B7FA6').replace('var(--red)','#E2554F'), fillOpacity:0.9})
       .addTo(map).bindPopup(`<b>${p.name}</b><br>Draft ${p.draft}m · Congestion ${p.congestion}%`);
@@ -629,16 +705,27 @@ function initMap(){
   Object.entries(origins).forEach(([name,o])=>{
     L.circleMarker([o.lat,o.lon], {radius:6, color:'#5B7FA6', fillOpacity:0.9}).addTo(map).bindPopup(`<b>${name}</b> (load port)`);
   });
+  drawRoute('Australia', 'Paradip', 'Low', false);
+  requestAnimationFrame(()=>map.invalidateSize({animate:false}));
 }
-function drawRoute(originName, destName, riskLevel){
+function ensureMap(){
+  if(map) return;
+  if(window.L){ initMap(); return; }
+  window.__libReady.leaflet.then(ok=>{ if(ok) initMap(); });
+}
+function drawRoute(originName, destName, riskLevel, shouldFit=true){
   if(!map) return;
   const o = origins[originName]; const d = ports.find(p=>p.name===destName);
   if(!o || !d) return;
   if(routeLine) map.removeLayer(routeLine);
   const color = riskLevel==='High' ? '#E2554F' : riskLevel==='Moderate' ? '#5B7FA6' : '#33C481';
-  routeLine = L.polyline([[o.lat,o.lon],[d.lat,d.lon]], {color, weight:2.5, dashArray:'6 4'}).addTo(map);
-  map.invalidateSize();
-  map.fitBounds(routeLine.getBounds(), {padding:[40,40]});
+  // A gentle sea-lane bend is more legible than a straight chord across the map.
+  const midLat=(o.lat+d.lat)/2-7, midLon=(o.lon+d.lon)/2;
+  routeLine = L.polyline([[o.lat,o.lon],[midLat,midLon],[d.lat,d.lon]], {color, weight:3, opacity:.95, dashArray:'8 7', lineCap:'round'}).addTo(map);
+  const label=document.getElementById('mapRouteLabel');
+  if(label) label.textContent=`${originName.toUpperCase()} → ${destName.toUpperCase()}`;
+  map.invalidateSize({animate:false});
+  if(shouldFit) map.fitBounds(routeLine.getBounds(), {padding:[55,55], maxZoom:4, animate:true});
 }
 
 // ---------- live AIS ships (aisstream.io, relayed through our backend) ----------
@@ -674,17 +761,19 @@ function connectShipsWS(){
 
 window.__libReady.leaflet.then(ok=>{
   if(!ok){
-    document.getElementById('routeMap').outerHTML = `<div class="src-note" style="padding:20px;">⚠ Leaflet failed to load from both cdnjs and jsdelivr — check whether your network/firewall blocks either domain. Everything else on this page still works.</div>`;
+    const empty=document.getElementById('mapEmpty');
+    if(empty) empty.innerHTML = `<span>Map engine unavailable · check network access to the CDN</span>`;
     return;
   }
   try{
-    initMap();
-    setTimeout(()=>{ if(map) map.invalidateSize(); }, 200);
-    window.addEventListener('resize', ()=>{ if(map) map.invalidateSize(); });
+    // Defer creation until the tab is visible; Leaflet cannot correctly measure a display:none container.
+    if(document.querySelector('.tab-panel[data-tab="map"]').classList.contains('active')) initMap();
+    window.addEventListener('resize', ()=>{ if(map) map.invalidateSize({animate:false}); });
     connectShipsWS();
   }catch(e){
     console.error('Map init failed:', e);
-    document.getElementById('routeMap').outerHTML = `<div class="src-note" style="padding:20px;">⚠ Map failed to initialise: ${e.message}</div>`;
+    const empty=document.getElementById('mapEmpty');
+    if(empty) empty.innerHTML = `<span>Map failed to initialise: ${e.message}</span>`;
   }
 });
 
