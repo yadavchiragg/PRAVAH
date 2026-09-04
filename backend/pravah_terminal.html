@@ -423,7 +423,11 @@ window.addEventListener('error', function(e){
   bar.textContent = '⚠ Script error: ' + e.message + ' (line ' + e.lineno + ') — a panel below this may not have rendered. Open DevTools console (F12) for the full stack.';
   document.body.prepend(bar);
 });
-const API_BASE = 'http://localhost:8000';
+// Local development uses the FastAPI server on :8000. On Render (or any
+// hosted deployment), call the API from the same origin as this dashboard.
+const API_BASE = ['localhost', '127.0.0.1'].includes(window.location.hostname)
+  ? 'http://localhost:8000'
+  : window.location.origin;
 
 // ---------- tab navigation ----------
 function switchTab(name){
