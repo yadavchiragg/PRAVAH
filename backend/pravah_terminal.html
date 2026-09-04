@@ -688,13 +688,10 @@ function initMap(){
   if(mapInitialised || !window.L) return;
   mapInitialised = true;
   map = L.map('routeMap', {zoomControl:true, attributionControl:true, worldCopyJump:true, preferCanvas:true}).setView([5,90], 3);
-  // Esri's public Canvas service requires no key. Its reference layer supplies
-  // English country/place labels, unlike standard OSM's native-language labels.
-  const tiles = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}', {
-    attribution:'Tiles &copy; Esri', maxZoom:16, crossOrigin:true,
-  }).addTo(map);
-  L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}', {
-    attribution:'&copy; Esri', maxZoom:16, pane:'overlayPane', crossOrigin:true,
+  // Standard OpenStreetMap tiles are public, key-free, and show the most
+  // familiar real-world cartography for route planning.
+  const tiles = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution:'&copy; OpenStreetMap contributors', subdomains:'abc', maxZoom:19, crossOrigin:true,
   }).addTo(map);
   tiles.once('load', ()=>{ mapTilesLoaded=true; const el=document.getElementById('mapEmpty'); if(el) el.remove(); });
   tiles.on('tileerror', ()=>{
